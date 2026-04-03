@@ -1,0 +1,43 @@
+# Node
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+.npm/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ML Artifacts
+mlruns/
+ai-engine/models/intent_classifier/*.onnx
+ai-engine/rag/corpus/*.index
+ai-engine/rag/corpus/*.pkl
+
+# OS Logs and Configs
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pytest_cache/
+.coverage
+htmlcov/
