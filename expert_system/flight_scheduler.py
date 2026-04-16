@@ -5,8 +5,6 @@ Manages flight schedules, validates them against the expert rules,
 and provides schedule optimization suggestions.
 """
 
-from datetime import datetime, timedelta
-
 from expert_system.knowledge_base import (
     AIRCRAFT_FLEET,
     AIRPORTS,
