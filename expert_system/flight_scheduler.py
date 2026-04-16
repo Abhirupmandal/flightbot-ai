@@ -208,13 +208,28 @@ class FlightScheduler:
     # ── Helpers ──────────────────────────────────────────────────────────
 
     @staticmethod
+    def _to_minutes(time_str):
+        """Convert HH:MM string to minutes since midnight."""
+        h, m = map(int, time_str.split(":"))
+        return h * 60 + m
+
+    @staticmethod
     def _times_overlap(dep1, arr1, dep2, arr2):
-        """Check if two time ranges overlap (HH:MM strings)."""
+        """Check if two time ranges overlap (HH:MM strings).
+
+        Handles overnight flights where arrival < departure by treating
+        the arrival as being on the next day.
+        """
         try:
-            d1 = int(dep1.replace(":", ""))
-            a1 = int(arr1.replace(":", ""))
-            d2 = int(dep2.replace(":", ""))
-            a2 = int(arr2.replace(":", ""))
+            d1 = FlightScheduler._to_minutes(dep1)
+            a1 = FlightScheduler._to_minutes(arr1)
+            d2 = FlightScheduler._to_minutes(dep2)
+            a2 = FlightScheduler._to_minutes(arr2)
+            # If arrival is before departure, the flight crosses midnight
+            if a1 <= d1:
+                a1 += 24 * 60
+            if a2 <= d2:
+                a2 += 24 * 60
             return d1 < a2 and d2 < a1
         except (ValueError, AttributeError):
             return False
@@ -223,9 +238,11 @@ class FlightScheduler:
     def _times_close(t1, t2, threshold_min):
         """Check if two HH:MM times are within threshold_min of each other."""
         try:
-            h1, m1 = map(int, t1.split(":"))
-            h2, m2 = map(int, t2.split(":"))
-            diff = abs((h1 * 60 + m1) - (h2 * 60 + m2))
+            m1 = FlightScheduler._to_minutes(t1)
+            m2 = FlightScheduler._to_minutes(t2)
+            diff = abs(m1 - m2)
+            # Account for wrap-around midnight
+            diff = min(diff, 24 * 60 - diff)
             return diff <= threshold_min
         except (ValueError, AttributeError):
             return False
