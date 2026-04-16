@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}AeroScheduler - Cargo Scheduling{% endblock %}
+{% block page_title %}Cargo Scheduling{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <h2>Schedule a Cargo Shipment</h2>
+    <form id="cargoForm" method="POST" action="/api/cargo">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="aircraft">Aircraft</label>
+                <select id="aircraft" name="aircraft" required>
+                    {% for id, info in aircraft.items() %}
+                    <option value="{{ id }}">{{ id }} - {{ info.type }}
+                        (Cargo: {{ info.cargo_capacity_kg }} kg)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="origin">Origin Airport</label>
+                <select id="origin" name="origin" required>
+                    {% for code, info in airports.items() %}
+                    <option value="{{ code }}">{{ code }} - {{ info.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="destination">Destination Airport</label>
+                <select id="destination" name="destination" required>
+                    {% for code, info in airports.items() %}
+                    <option value="{{ code }}">{{ code }} - {{ info.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="cargo_type">Cargo Type</label>
+                <select id="cargo_type" name="cargo_type" required>
+                    {% for type_id, info in cargo_types.items() %}
+                    <option value="{{ type_id }}">{{ info.name }}
+                        - {{ info.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="weight_kg">Weight (kg)</label>
+                <input type="number" id="weight_kg" name="weight_kg"
+                       placeholder="e.g., 5000" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="volume_m3">Volume (m&sup3;)</label>
+                <input type="number" id="volume_m3" name="volume_m3"
+                       placeholder="e.g., 20" min="0.1" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="is_passenger_flight">Flight Type</label>
+                <select id="is_passenger_flight" name="is_passenger_flight">
+                    <option value="true">Passenger Flight (Belly Cargo)</option>
+                    <option value="false">Dedicated Freighter</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="estimated_transit_hours">Est. Transit Hours
+                    <span class="optional">auto-calculated if empty</span></label>
+                <input type="number" id="estimated_transit_hours"
+                       name="estimated_transit_hours" placeholder="Auto"
+                       min="0" step="0.5">
+            </div>
+            <div class="form-group full-width">
+                <label for="description">Description
+                    <span class="optional">optional</span></label>
+                <input type="text" id="description" name="description"
+                       placeholder="Brief description of the cargo">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            &#9736; Schedule Cargo &amp; Validate
+        </button>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div id="results" class="results-section" style="display:none;">
+    <div class="card result-card">
+        <h2>Validation Results</h2>
+        <div id="validationResults"></div>
+    </div>
+    <div class="card result-card" id="recommendationsCard" style="display:none;">
+        <h2>Expert Recommendations</h2>
+        <div id="recommendations"></div>
+    </div>
+</div>
+
+<!-- Cargo Shipments Table -->
+{% if shipments %}
+<div class="card table-card">
+    <h2>Cargo Shipments ({{ shipments | length }})</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Shipment #</th>
+                    <th>Aircraft</th>
+                    <th>Route</th>
+                    <th>Cargo Type</th>
+                    <th>Weight</th>
+                    <th>Volume</th>
+                    <th>Utilization</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in shipments %}
+                <tr class="row-{{ s.status }}">
+                    <td><strong>{{ s.shipment_number }}</strong></td>
+                    <td>{{ s.aircraft }}</td>
+                    <td>{{ s.origin }} &rarr; {{ s.destination }}</td>
+                    <td>{{ s.cargo_type_name }}</td>
+                    <td>{{ s.weight_kg }} kg</td>
+                    <td>{{ s.volume_m3 }} m&sup3;</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill
+                                {% if s.cargo_utilization_pct > 90 %}progress-high
+                                {% elif s.cargo_utilization_pct > 60 %}progress-medium
+                                {% else %}progress-low{% endif %}"
+                                 style="width: {{ s.cargo_utilization_pct }}%">
+                            </div>
+                            <span class="progress-text">
+                                {{ s.cargo_utilization_pct }}%
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ s.status }}">
+                            {{ s.status | title }}
+                        </span>
+                    </td>
+                    <td>
+                        <form method="POST"
+                              action="/api/cargo/{{ s.id }}/delete"
+                              style="display:inline;">
+                            <button type="submit"
+                                    class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Cargo Summary -->
+<div class="card-row">
+    <div class="card info-card">
+        <h2>Cargo Summary</h2>
+        <div class="summary-stats">
+            <div class="summary-item">
+                <span class="label">Total Weight:</span>
+                <span class="value">{{ cargo_summary.total_weight_kg }} kg</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Total Volume:</span>
+                <span class="value">{{ cargo_summary.total_volume_m3 }} m&sup3;</span>
+            </div>
+        </div>
+        {% if cargo_summary.type_breakdown %}
+        <h3>By Cargo Type</h3>
+        <div class="breakdown-list">
+            {% for type_name, data in cargo_summary.type_breakdown.items() %}
+            <div class="breakdown-item">
+                <span class="label">{{ type_name }}:</span>
+                <span class="value">{{ data.count }} shipment(s),
+                    {{ data.weight }} kg</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('cargoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+
+    // Convert types
+    data.weight_kg = parseFloat(data.weight_kg);
+    data.volume_m3 = parseFloat(data.volume_m3);
+    data.is_passenger_flight = data.is_passenger_flight === 'true';
+
+    if (data.estimated_transit_hours === '') {
+        data.estimated_transit_hours = 0;
+    } else {
+        data.estimated_transit_hours = parseFloat(data.estimated_transit_hours);
+    }
+
+    fetch('/api/cargo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+        displayResults(result);
+        setTimeout(() => location.reload(), 2000);
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        alert('Error scheduling cargo. Please try again.');
+    });
+});
+
+function displayResults(result) {
+    const resultsDiv = document.getElementById('results');
+    const validationDiv = document.getElementById('validationResults');
+    const recsDiv = document.getElementById('recommendations');
+    const recsCard = document.getElementById('recommendationsCard');
+
+    resultsDiv.style.display = 'block';
+    validationDiv.innerHTML = '';
+
+    const shipment = result.shipment;
+    shipment.validation_results.forEach(r => {
+        const alertClass = r.severity === 'critical' ? 'alert-critical' :
+                          r.severity === 'high' ? 'alert-high' :
+                          r.severity === 'medium' ? 'alert-medium' : 'alert-info';
+        validationDiv.innerHTML += `
+            <div class="alert ${alertClass}">
+                <strong>[${r.rule_id}] ${r.rule_name}</strong>
+                <p>${r.message}</p>
+            </div>
+        `;
+    });
+
+    const statusClass = shipment.status === 'approved' ? 'alert-info' :
+                        shipment.status === 'warning' ? 'alert-medium' :
+                        'alert-critical';
+    validationDiv.innerHTML = `
+        <div class="alert ${statusClass}" style="font-size:1.1em;">
+            <strong>Overall Status: ${shipment.status.toUpperCase()}</strong>
+        </div>
+    ` + validationDiv.innerHTML;
+
+    if (result.recommendations && result.recommendations.length > 0) {
+        recsCard.style.display = 'block';
+        recsDiv.innerHTML = '';
+        result.recommendations.forEach(r => {
+            const sev = r.severity === 'high' ? 'alert-high' :
+                       r.severity === 'medium' ? 'alert-medium' : 'alert-info';
+            recsDiv.innerHTML += `
+                <div class="alert ${sev}">
+                    <strong>${r.title}</strong>
+                    <p>${r.message}</p>
+                </div>
+            `;
+        });
+    }
+}
+</script>
+{% endblock %}
