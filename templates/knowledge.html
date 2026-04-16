@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}AeroScheduler - Knowledge Base{% endblock %}
+{% block page_title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="card info-card">
+    <h2>Expert System Architecture</h2>
+    <div class="architecture-diagram">
+        <div class="arch-box arch-user">
+            <h4>User Interface</h4>
+            <p>Web-based forms for flight &amp; cargo scheduling input</p>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-box arch-engine">
+            <h4>Inference Engine</h4>
+            <p>Forward-chaining rule evaluator &mdash; applies all matching rules</p>
+        </div>
+        <div class="arch-arrow-row">
+            <div class="arch-arrow">&darr;</div>
+            <div class="arch-arrow">&darr;</div>
+        </div>
+        <div class="arch-row">
+            <div class="arch-box arch-kb">
+                <h4>Knowledge Base</h4>
+                <p>{{ rules_count }} expert rules, aircraft data, airport data</p>
+            </div>
+            <div class="arch-box arch-output">
+                <h4>Output</h4>
+                <p>Validation results, warnings, recommendations</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Aircraft Fleet -->
+<div class="card table-card">
+    <h2>Aircraft Fleet Database</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Range (km)</th>
+                    <th>Passengers</th>
+                    <th>Cargo (kg)</th>
+                    <th>Cargo Vol (m&sup3;)</th>
+                    <th>Fuel/hr (kg)</th>
+                    <th>Turnaround (min)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for id, a in aircraft.items() %}
+                <tr>
+                    <td><strong>{{ id }}</strong></td>
+                    <td>{{ a.type }}</td>
+                    <td><span class="badge badge-{{ a.category }}">
+                        {{ a.category | replace('-', ' ') | title }}</span></td>
+                    <td>{{ a.max_range_km }}</td>
+                    <td>{{ a.max_passengers }}</td>
+                    <td>{{ a.cargo_capacity_kg }}</td>
+                    <td>{{ a.cargo_volume_m3 }}</td>
+                    <td>{{ a.fuel_burn_per_hour_kg }}</td>
+                    <td>{{ a.turnaround_time_min }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Airports -->
+<div class="card table-card">
+    <h2>Airport Database</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>City</th>
+                    <th>Country</th>
+                    <th>Hub</th>
+                    <th>Cargo Facility</th>
+                    <th>Curfew</th>
+                    <th>Peak Hours</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for code, ap in airports.items() %}
+                <tr>
+                    <td><strong>{{ code }}</strong></td>
+                    <td>{{ ap.name }}</td>
+                    <td>{{ ap.city }}</td>
+                    <td>{{ ap.country }}</td>
+                    <td>{% if ap.hub %}Yes{% else %}No{% endif %}</td>
+                    <td>{% if ap.cargo_facility %}Yes{% else %}No{% endif %}</td>
+                    <td>{% if ap.curfew_start is not none %}
+                        {{ ap.curfew_start }}:00 - {{ ap.curfew_end }}:00
+                        {% else %}None{% endif %}</td>
+                    <td>{% for start, end in ap.peak_hours %}
+                        {{ start }}:00-{{ end }}:00{{ ", " if not loop.last }}
+                        {% endfor %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Cargo Types -->
+<div class="card table-card">
+    <h2>Cargo Types &amp; Restrictions</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Name</th>
+                    <th>Priority</th>
+                    <th>Temp Control</th>
+                    <th>Hazardous</th>
+                    <th>Max Transit (hrs)</th>
+                    <th>Handling (min)</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for type_id, ct in cargo_types.items() %}
+                <tr>
+                    <td><strong>{{ type_id }}</strong></td>
+                    <td>{{ ct.name }}</td>
+                    <td><span class="priority priority-{{ ct.priority }}">
+                        P{{ ct.priority }}</span></td>
+                    <td>{% if ct.requires_temp_control %}Yes{% else %}No
+                        {% endif %}</td>
+                    <td>{% if ct.hazardous %}
+                        <span class="badge badge-danger">Yes</span>
+                        {% else %}No{% endif %}</td>
+                    <td>{{ ct.max_transit_hours }}</td>
+                    <td>{{ ct.handling_time_min }}</td>
+                    <td>{{ ct.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Expert Rules -->
+<div class="card table-card">
+    <h2>Expert Rules ({{ rules | length }})</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Action</th>
+                    <th>Condition</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rules %}
+                <tr>
+                    <td><strong>{{ r.id }}</strong></td>
+                    <td>{{ r.name }}</td>
+                    <td><span class="badge badge-{{ r.category }}">
+                        {{ r.category | title }}</span></td>
+                    <td><span class="severity severity-{{ r.severity }}">
+                        {{ r.severity | title }}</span></td>
+                    <td>{{ r.action | replace('_', ' ') | title }}</td>
+                    <td><code>{{ r.condition }}</code></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Scheduling Rules / Parameters -->
+<div class="card info-card">
+    <h2>Scheduling Parameters</h2>
+    <div class="params-grid">
+        {% for key, value in scheduling_rules.items() %}
+        <div class="param-item">
+            <span class="param-label">
+                {{ key | replace('_', ' ') | title }}
+            </span>
+            <span class="param-value">{{ value }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

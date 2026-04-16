@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}AeroScheduler - Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Summary Cards -->
+    <div class="card stat-card">
+        <div class="stat-icon flight-icon">&#9992;</div>
+        <div class="stat-info">
+            <h3>{{ flight_summary.total_flights }}</h3>
+            <p>Total Flights</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon cargo-icon">&#9736;</div>
+        <div class="stat-info">
+            <h3>{{ cargo_summary.total_shipments }}</h3>
+            <p>Cargo Shipments</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon approved-icon">&#10003;</div>
+        <div class="stat-info">
+            <h3>{{ flight_summary.approved + cargo_summary.approved }}</h3>
+            <p>Approved</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon warning-icon">&#9888;</div>
+        <div class="stat-info">
+            <h3>{{ flight_summary.warnings + cargo_summary.warnings }}</h3>
+            <p>Warnings</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon rejected-icon">&#10007;</div>
+        <div class="stat-info">
+            <h3>{{ flight_summary.rejected + cargo_summary.rejected }}</h3>
+            <p>Rejected</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon weight-icon">&#9878;</div>
+        <div class="stat-info">
+            <h3>{{ cargo_summary.total_weight_kg | default(0) }} kg</h3>
+            <p>Total Cargo Weight</p>
+        </div>
+    </div>
+</div>
+
+<!-- Expert System Info -->
+<div class="card-row">
+    <div class="card info-card">
+        <h2>About This Expert System</h2>
+        <p>The <strong>AeroScheduler Expert System</strong> uses a rule-based inference engine
+        to validate and optimize airline flight schedules and cargo shipments.</p>
+        <h3>Key Components</h3>
+        <ul>
+            <li><strong>Knowledge Base:</strong> Contains facts about aircraft fleet,
+                airports, cargo types, and scheduling constraints.</li>
+            <li><strong>Inference Engine:</strong> Uses forward-chaining to evaluate
+                {{ rules_count }} expert rules and detect conflicts.</li>
+            <li><strong>Flight Scheduler:</strong> Validates flight schedules against
+                range limits, curfews, crew rules, and turnaround times.</li>
+            <li><strong>Cargo Scheduler:</strong> Validates cargo shipments against
+                weight/volume limits, hazmat rules, and transit times.</li>
+        </ul>
+    </div>
+
+    <div class="card info-card">
+        <h2>Expert Rules Summary</h2>
+        <div class="rules-overview">
+            <div class="rule-category">
+                <span class="rule-badge flight-badge">Flight Rules</span>
+                <ul>
+                    <li>Aircraft range validation</li>
+                    <li>Turnaround time checks</li>
+                    <li>Night curfew enforcement</li>
+                    <li>Peak hour buffer warnings</li>
+                    <li>Connection time validation</li>
+                </ul>
+            </div>
+            <div class="rule-category">
+                <span class="rule-badge crew-badge">Crew Rules</span>
+                <ul>
+                    <li>Duty hours limits</li>
+                    <li>Rest period requirements</li>
+                </ul>
+            </div>
+            <div class="rule-category">
+                <span class="rule-badge cargo-badge">Cargo Rules</span>
+                <ul>
+                    <li>Weight &amp; volume limits</li>
+                    <li>Hazmat restrictions</li>
+                    <li>Perishable transit time</li>
+                    <li>Live animal transport</li>
+                    <li>Cargo facility checks</li>
+                    <li>Freighter recommendations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if conflicts %}
+<div class="card alert-card">
+    <h2>&#9888; Schedule Conflicts Detected</h2>
+    {% for c in conflicts %}
+    <div class="alert alert-{{ c.severity }}">
+        <strong>{{ c.type | replace('_', ' ') | title }}:</strong> {{ c.message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

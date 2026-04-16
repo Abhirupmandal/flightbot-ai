@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AeroScheduler Expert System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">&#9992;</span>
+                <span class="logo-text">AeroScheduler</span>
+            </div>
+            <p class="logo-subtitle">Expert System</p>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">&#9635;</span> Dashboard
+            </a></li>
+            <li><a href="/flights" class="{% if active_page == 'flights' %}active{% endif %}">
+                <span class="nav-icon">&#9992;</span> Flight Scheduling
+            </a></li>
+            <li><a href="/cargo" class="{% if active_page == 'cargo' %}active{% endif %}">
+                <span class="nav-icon">&#9736;</span> Cargo Scheduling
+            </a></li>
+            <li><a href="/knowledge" class="{% if active_page == 'knowledge' %}active{% endif %}">
+                <span class="nav-icon">&#9881;</span> Knowledge Base
+            </a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <p>Airline Scheduling &amp; Cargo</p>
+            <p>Expert System v1.0</p>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <div class="header-info">
+                <span class="badge badge-info">Expert System Active</span>
+                <span class="badge badge-success">{{ rules_count }} Rules Loaded</span>
+            </div>
+        </header>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
