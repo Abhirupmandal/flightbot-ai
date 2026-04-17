@@ -27,13 +27,19 @@
             <li><a href="/cargo" class="{% if active_page == 'cargo' %}active{% endif %}">
                 <span class="nav-icon">&#9736;</span> Cargo Scheduling
             </a></li>
+            <li><a href="/analytics" class="{% if active_page == 'analytics' %}active{% endif %}">
+                <span class="nav-icon">&#9733;</span> Analytics
+            </a></li>
             <li><a href="/knowledge" class="{% if active_page == 'knowledge' %}active{% endif %}">
                 <span class="nav-icon">&#9881;</span> Knowledge Base
             </a></li>
         </ul>
         <div class="sidebar-footer">
-            <p>Airline Scheduling &amp; Cargo</p>
-            <p>Expert System v1.0</p>
+            {% if current_user.is_authenticated %}
+            <p>Logged in as <strong>{{ current_user.username }}</strong></p>
+            <a href="/logout" class="btn btn-sm btn-logout">Logout</a>
+            {% endif %}
+            <p>Expert System v2.0</p>
         </div>
     </nav>
 
@@ -43,8 +49,24 @@
             <div class="header-info">
                 <span class="badge badge-info">Expert System Active</span>
                 <span class="badge badge-success">{{ rules_count }} Rules Loaded</span>
+                {% if current_user.is_authenticated %}
+                <span class="badge badge-user">{{ current_user.username }}</span>
+                {% endif %}
             </div>
         </header>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="alert alert-flash alert-{{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
 
         <div class="content">
             {% block content %}{% endblock %}

@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}AeroScheduler - Analytics{% endblock %}
+{% block page_title %}Analytics & Visualization{% endblock %}
+
+{% block content %}
+<!-- Export Buttons -->
+<div class="card export-card">
+    <h2>Export Data</h2>
+    <div class="export-buttons">
+        <a href="/export/flights/csv" class="btn btn-primary btn-sm">Export Flights CSV</a>
+        <a href="/export/flights/pdf" class="btn btn-primary btn-sm">Export Flights PDF</a>
+        <a href="/export/cargo/csv" class="btn btn-primary btn-sm">Export Cargo CSV</a>
+        <a href="/export/cargo/pdf" class="btn btn-primary btn-sm">Export Cargo PDF</a>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="card-row">
+    <div class="card chart-card">
+        <h2>Flight Status Distribution</h2>
+        <div class="chart-container">
+            <canvas id="flightStatusChart"></canvas>
+        </div>
+        <p class="chart-empty" id="flightEmpty" style="display:none;">
+            No flights scheduled yet. Add flights to see analytics.
+        </p>
+    </div>
+    <div class="card chart-card">
+        <h2>Cargo Status Distribution</h2>
+        <div class="chart-container">
+            <canvas id="cargoStatusChart"></canvas>
+        </div>
+        <p class="chart-empty" id="cargoEmpty" style="display:none;">
+            No cargo shipments yet. Add shipments to see analytics.
+        </p>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="card-row">
+    <div class="card chart-card">
+        <h2>Aircraft Usage</h2>
+        <div class="chart-container">
+            <canvas id="aircraftUsageChart"></canvas>
+        </div>
+        <p class="chart-empty" id="aircraftEmpty" style="display:none;">
+            No aircraft usage data yet.
+        </p>
+    </div>
+    <div class="card chart-card">
+        <h2>Route Distribution</h2>
+        <div class="chart-container">
+            <canvas id="routeChart"></canvas>
+        </div>
+        <p class="chart-empty" id="routeEmpty" style="display:none;">
+            No route data yet.
+        </p>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+<div class="card-row">
+    <div class="card chart-card">
+        <h2>Cargo by Type</h2>
+        <div class="chart-container">
+            <canvas id="cargoTypeChart"></canvas>
+        </div>
+        <p class="chart-empty" id="cargoTypeEmpty" style="display:none;">
+            No cargo type data yet.
+        </p>
+    </div>
+    <div class="card chart-card">
+        <h2>Summary Statistics</h2>
+        <div class="summary-stats-grid">
+            <div class="stat-box stat-box-flights">
+                <h3 id="statTotalFlights">{{ flight_summary.total_flights }}</h3>
+                <p>Total Flights</p>
+            </div>
+            <div class="stat-box stat-box-cargo">
+                <h3 id="statTotalCargo">{{ cargo_summary.total_shipments }}</h3>
+                <p>Total Shipments</p>
+            </div>
+            <div class="stat-box stat-box-approved">
+                <h3 id="statApproved">{{ flight_summary.approved + cargo_summary.approved }}</h3>
+                <p>Total Approved</p>
+            </div>
+            <div class="stat-box stat-box-rejected">
+                <h3 id="statRejected">{{ flight_summary.rejected + cargo_summary.rejected }}</h3>
+                <p>Total Rejected</p>
+            </div>
+            <div class="stat-box stat-box-weight">
+                <h3 id="statWeight">{{ cargo_summary.total_weight_kg }} kg</h3>
+                <p>Cargo Weight</p>
+            </div>
+            <div class="stat-box stat-box-routes">
+                <h3 id="statRoutes">{{ flight_summary.route_counts | length }}</h3>
+                <p>Active Routes</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+const COLORS = {
+    approved: '#059669',
+    warnings: '#d97706',
+    rejected: '#dc2626',
+    palette: ['#1a56db', '#a855f7', '#059669', '#d97706', '#dc2626',
+              '#0891b2', '#4f46e5', '#ea580c', '#84cc16', '#f43f5e']
+};
+
+fetch('/api/chart-data')
+    .then(res => res.json())
+    .then(data => {
+        // Flight Status Pie Chart
+        const flightTotal = data.flight_status.approved +
+                           data.flight_status.warnings +
+                           data.flight_status.rejected;
+        if (flightTotal > 0) {
+            new Chart(document.getElementById('flightStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Approved', 'Warnings', 'Rejected'],
+                    datasets: [{
+                        data: [data.flight_status.approved,
+                               data.flight_status.warnings,
+                               data.flight_status.rejected],
+                        backgroundColor: [COLORS.approved, COLORS.warnings, COLORS.rejected],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('flightStatusChart').style.display = 'none';
+            document.getElementById('flightEmpty').style.display = 'block';
+        }
+
+        // Cargo Status Pie Chart
+        const cargoTotal = data.cargo_status.approved +
+                          data.cargo_status.warnings +
+                          data.cargo_status.rejected;
+        if (cargoTotal > 0) {
+            new Chart(document.getElementById('cargoStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Approved', 'Warnings', 'Rejected'],
+                    datasets: [{
+                        data: [data.cargo_status.approved,
+                               data.cargo_status.warnings,
+                               data.cargo_status.rejected],
+                        backgroundColor: [COLORS.approved, COLORS.warnings, COLORS.rejected],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('cargoStatusChart').style.display = 'none';
+            document.getElementById('cargoEmpty').style.display = 'block';
+        }
+
+        // Aircraft Usage Bar Chart
+        const aircraftLabels = Object.keys(data.aircraft_usage);
+        if (aircraftLabels.length > 0) {
+            new Chart(document.getElementById('aircraftUsageChart'), {
+                type: 'bar',
+                data: {
+                    labels: aircraftLabels,
+                    datasets: [{
+                        label: 'Flights',
+                        data: Object.values(data.aircraft_usage),
+                        backgroundColor: COLORS.palette.slice(0, aircraftLabels.length),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('aircraftUsageChart').style.display = 'none';
+            document.getElementById('aircraftEmpty').style.display = 'block';
+        }
+
+        // Route Distribution Bar Chart
+        const routeLabels = Object.keys(data.route_counts);
+        if (routeLabels.length > 0) {
+            new Chart(document.getElementById('routeChart'), {
+                type: 'bar',
+                data: {
+                    labels: routeLabels,
+                    datasets: [{
+                        label: 'Flights',
+                        data: Object.values(data.route_counts),
+                        backgroundColor: COLORS.palette.slice(0, routeLabels.length),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('routeChart').style.display = 'none';
+            document.getElementById('routeEmpty').style.display = 'block';
+        }
+
+        // Cargo Type Breakdown Chart
+        const cargoTypeLabels = Object.keys(data.cargo_type_breakdown);
+        if (cargoTypeLabels.length > 0) {
+            const cargoWeights = cargoTypeLabels.map(
+                k => data.cargo_type_breakdown[k].weight
+            );
+            new Chart(document.getElementById('cargoTypeChart'), {
+                type: 'pie',
+                data: {
+                    labels: cargoTypeLabels,
+                    datasets: [{
+                        data: cargoWeights,
+                        backgroundColor: COLORS.palette.slice(0, cargoTypeLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('cargoTypeChart').style.display = 'none';
+            document.getElementById('cargoTypeEmpty').style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}
