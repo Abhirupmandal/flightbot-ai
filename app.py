@@ -276,7 +276,13 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get("next")
-            if not next_page or not next_page.startswith("/") or next_page.startswith("//"):
+            # Robust open-redirect protection: only allow safe relative paths
+            from urllib.parse import urlparse
+            if next_page:
+                parsed = urlparse(next_page)
+                if parsed.scheme or parsed.netloc:
+                    next_page = None
+            if not next_page or not next_page.startswith("/"):
                 next_page = url_for("dashboard")
             flash("Logged in successfully!", "success")
             return redirect(next_page)
