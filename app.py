@@ -68,6 +68,29 @@ with app.app_context():
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+def _check_conflicts_from_db():
+    """Build a local FlightScheduler from DB records and check conflicts.
+
+    Uses a request-local instance to avoid race conditions from concurrent
+    requests mutating the shared module-level flight_scheduler.
+    """
+    from expert_system.flight_scheduler import Flight
+    local_scheduler = FlightScheduler()
+    for f in FlightRecord.query.all():
+        fl = Flight.__new__(Flight)
+        fl.id = f.id
+        fl.flight_number = f.flight_number
+        fl.aircraft = f.aircraft
+        fl.origin = f.origin
+        fl.destination = f.destination
+        fl.departure_time = f.departure_time
+        fl.arrival_time = f.arrival_time
+        fl.status = f.status
+        fl.validation_results = []
+        local_scheduler.flights.append(fl)
+    return local_scheduler.check_conflicts()
+
+
 def _flight_record_to_dict(rec):
     """Convert a FlightRecord to a display dict (mirrors Flight.to_dict)."""
     aircraft_info = AIRCRAFT_FLEET.get(rec.aircraft, {})
@@ -259,8 +282,10 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get("next")
+            if not next_page or not next_page.startswith("/"):
+                next_page = url_for("dashboard")
             flash("Logged in successfully!", "success")
-            return redirect(next_page or url_for("dashboard"))
+            return redirect(next_page)
 
         flash("Invalid username or password.", "danger")
         return render_template("login.html")
@@ -285,23 +310,7 @@ def dashboard():
     flight_summary = _get_flight_summary()
     cargo_summary = _get_cargo_summary()
 
-    # Build conflict list from DB flights
-    flights = FlightRecord.query.all()
-    flight_scheduler.flights = []
-    for f in flights:
-        from expert_system.flight_scheduler import Flight
-        fl = Flight.__new__(Flight)
-        fl.id = f.id
-        fl.flight_number = f.flight_number
-        fl.aircraft = f.aircraft
-        fl.origin = f.origin
-        fl.destination = f.destination
-        fl.departure_time = f.departure_time
-        fl.arrival_time = f.arrival_time
-        fl.status = f.status
-        fl.validation_results = []
-        flight_scheduler.flights.append(fl)
-    conflicts = flight_scheduler.check_conflicts()
+    conflicts = _check_conflicts_from_db()
 
     return render_template(
         "index.html",
@@ -469,9 +478,10 @@ def add_cargo():
 
     shipment_dict = result["shipment"]
 
-    # Persist to database
+    # Persist to database — generate shipment_number from DB auto-increment ID
+    # to avoid duplicates after server restarts
     rec = CargoRecord(
-        shipment_number=shipment_dict["shipment_number"],
+        shipment_number="CRG-TEMP",
         aircraft=data["aircraft"],
         origin=data["origin"],
         destination=data["destination"],
@@ -486,9 +496,12 @@ def add_cargo():
         user_id=current_user.id,
     )
     db.session.add(rec)
+    db.session.flush()
+    rec.shipment_number = f"CRG-{rec.id:04d}"
     db.session.commit()
 
     shipment_dict["id"] = rec.id
+    shipment_dict["shipment_number"] = rec.shipment_number
     return jsonify(result)
 
 
@@ -507,22 +520,7 @@ def delete_cargo(shipment_id):
 @login_required
 def get_conflicts():
     """Get all schedule conflicts."""
-    flights = FlightRecord.query.all()
-    flight_scheduler.flights = []
-    for f in flights:
-        from expert_system.flight_scheduler import Flight
-        fl = Flight.__new__(Flight)
-        fl.id = f.id
-        fl.flight_number = f.flight_number
-        fl.aircraft = f.aircraft
-        fl.origin = f.origin
-        fl.destination = f.destination
-        fl.departure_time = f.departure_time
-        fl.arrival_time = f.arrival_time
-        fl.status = f.status
-        fl.validation_results = []
-        flight_scheduler.flights.append(fl)
-    conflicts = flight_scheduler.check_conflicts()
+    conflicts = _check_conflicts_from_db()
     return jsonify({"conflicts": conflicts})
 
 
