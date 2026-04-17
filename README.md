@@ -262,13 +262,13 @@ General, Perishable, Hazardous, Live Animals, Valuable, Oversized — each with 
 | R06 | Cargo Weight Limit | Cargo | Critical | Cargo weight vs. aircraft capacity |
 | R07 | Cargo Volume Limit | Cargo | Critical | Cargo volume vs. aircraft hold |
 | R08 | Hazardous Cargo Limit | Cargo | Critical | Max 500 kg hazmat per flight |
-| R09 | Perishable Transit Time | Cargo | Critical | Max transit hours for perishables |
+| R09 | Perishable Transit Time | Cargo | High | Max transit hours for perishables |
 | R10 | Live Animal Transit | Cargo | Critical | Max 18 hrs for live animals |
 | R11 | Peak Hour Buffer | Flight | Medium | 15-min buffer during peak hours |
-| R12 | Cargo Facility Check | Cargo | High | Airport must have cargo facility |
-| R13 | Hazmat-Passenger Separation | Cargo | Medium | Warning for hazmat on passenger flights |
+| R12 | Cargo Facility Check | Cargo | Critical | Airport must have cargo facility |
+| R13 | Hazmat-Passenger Separation | Cargo | High | Warning for hazmat on passenger flights |
 | R14 | Freighter Recommendation | Cargo | Info | Suggests freighter for heavy cargo |
-| R15 | Connection Time Check | Flight | Medium | Min 60-min connection time |
+| R15 | Connection Time Check | Flight | Critical | Min 60-min connection time |
 
 ---
 
