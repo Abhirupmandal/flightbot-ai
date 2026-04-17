@@ -37,7 +37,7 @@ from expert_system.knowledge_base import (
 from expert_system.flight_scheduler import FlightScheduler
 from expert_system.cargo_scheduler import CargoScheduler
 
-# ── App Factory ──────────────────────────────────────────────────────────────
+# ── App Setup ────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "aero-scheduler-dev-key-change-in-prod")
@@ -56,7 +56,7 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-# Create tables on first request
+# Create tables on startup
 with app.app_context():
     db.create_all()
 

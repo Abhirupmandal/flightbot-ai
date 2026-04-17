@@ -2,20 +2,72 @@
 
 import json
 import pytest
-from app import app, db
-from expert_system.models import User, FlightRecord, CargoRecord
+from expert_system.models import db, User, FlightRecord, CargoRecord
+
+
+def _create_test_app():
+    """Create a fresh Flask app configured for testing with an in-memory DB.
+
+    This avoids the problem of Flask-SQLAlchemy caching the engine at
+    init_app() time — we create a brand-new app + db binding so the
+    in-memory URI is used from the start.
+    """
+    import os
+    from flask import Flask
+    from flask_login import LoginManager
+
+    test_app = Flask(
+        "app",
+        template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
+        static_folder=os.path.join(os.path.dirname(__file__), "..", "static"),
+    )
+    test_app.config["TESTING"] = True
+    test_app.config["SECRET_KEY"] = "test-secret"
+    test_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    test_app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    test_app.config["WTF_CSRF_ENABLED"] = False
+
+    db.init_app(test_app)
+
+    lm = LoginManager()
+    lm.init_app(test_app)
+    lm.login_view = "login"
+    lm.login_message_category = "info"
+
+    @lm.user_loader
+    def load_user(user_id):
+        return db.session.get(User, int(user_id))
+
+    # Import the main app module to register routes, then copy them
+    import app as main_app_module
+    for key, value in main_app_module.app.view_functions.items():
+        test_app.view_functions[key] = value
+    for rule in main_app_module.app.url_map.iter_rules():
+        if rule.endpoint not in test_app.url_map._rules_by_endpoint:
+            test_app.add_url_rule(
+                rule.rule,
+                endpoint=rule.endpoint,
+                methods=rule.methods - {"OPTIONS", "HEAD"},
+            )
+
+    # Copy context processors and template globals
+    test_app.context_processor(
+        lambda: {"rules_count": len(main_app_module.EXPERT_RULES)}
+    )
+
+    with test_app.app_context():
+        db.create_all()
+
+    return test_app
 
 
 @pytest.fixture
 def client():
     """Create a test client with a fresh in-memory database."""
-    app.config["TESTING"] = True
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["WTF_CSRF_ENABLED"] = False
+    test_app = _create_test_app()
 
-    with app.app_context():
-        db.create_all()
-        yield app.test_client()
+    with test_app.app_context():
+        yield test_app.test_client()
         db.drop_all()
 
 
@@ -53,9 +105,8 @@ class TestAuthRoutes:
             "confirm_password": "password123",
         }, follow_redirects=True)
         assert resp.status_code == 200
-        with app.app_context():
-            user = User.query.filter_by(username="newuser").first()
-            assert user is not None
+        user = User.query.filter_by(username="newuser").first()
+        assert user is not None
 
     def test_register_duplicate_username(self, client):
         client.post("/register", data={
@@ -191,9 +242,8 @@ class TestFlightAPI:
             }),
             content_type="application/json",
         )
-        with app.app_context():
-            rec = FlightRecord.query.first()
-            flight_id = rec.id
+        rec = FlightRecord.query.first()
+        flight_id = rec.id
         resp = auth_client.post(f"/api/flights/{flight_id}/delete",
                                 follow_redirects=True)
         assert resp.status_code == 200
@@ -210,9 +260,8 @@ class TestFlightAPI:
             }),
             content_type="application/json",
         )
-        with app.app_context():
-            count = FlightRecord.query.count()
-            assert count == 1
+        count = FlightRecord.query.count()
+        assert count == 1
 
 
 class TestCargoAPI:
@@ -255,9 +304,8 @@ class TestCargoAPI:
             }),
             content_type="application/json",
         )
-        with app.app_context():
-            count = CargoRecord.query.count()
-            assert count == 1
+        count = CargoRecord.query.count()
+        assert count == 1
 
 
 class TestExportRoutes:
