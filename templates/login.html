@@ -25,7 +25,7 @@
             {% endif %}
             {% endwith %}
 
-            <form method="POST" action="/login" class="auth-form">
+            <form method="POST" action="/login{{ '?next=' + request.args.get('next') if request.args.get('next') else '' }}" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username"
