@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroScheduler - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <span class="logo-icon" style="font-size:40px;">&#9992;</span>
+                <h1>AeroScheduler</h1>
+                <p>Airline Scheduling Expert System</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-flash alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/login{{ '?next=' + request.args.get('next') if request.args.get('next') else '' }}" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username"
+                           placeholder="Enter your username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password"
+                           placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Login</button>
+            </form>
+            <p class="auth-link">
+                Don't have an account? <a href="/register">Register here</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
