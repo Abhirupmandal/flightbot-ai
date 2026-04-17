@@ -51,11 +51,6 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "info"
 
-# Initialize schedulers (still used for inference logic)
-flight_scheduler = FlightScheduler()
-cargo_scheduler = CargoScheduler()
-
-
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -71,8 +66,7 @@ with app.app_context():
 def _check_conflicts_from_db():
     """Build a local FlightScheduler from DB records and check conflicts.
 
-    Uses a request-local instance to avoid race conditions from concurrent
-    requests mutating the shared module-level flight_scheduler.
+    Uses a request-local instance to avoid race conditions and memory leaks.
     """
     from expert_system.flight_scheduler import Flight
     local_scheduler = FlightScheduler()
@@ -282,7 +276,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             next_page = request.args.get("next")
-            if not next_page or not next_page.startswith("/"):
+            if not next_page or not next_page.startswith("/") or next_page.startswith("//"):
                 next_page = url_for("dashboard")
             flash("Logged in successfully!", "success")
             return redirect(next_page)
@@ -399,8 +393,10 @@ def add_flight():
         if field not in data:
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
-    # Validate through inference engine (in-memory)
-    result = flight_scheduler.add_flight(
+    # Validate through inference engine using a request-local scheduler
+    # to avoid unbounded in-memory growth on the shared instance
+    local_flight_scheduler = FlightScheduler()
+    result = local_flight_scheduler.add_flight(
         flight_number=data["flight_number"],
         aircraft=data["aircraft"],
         origin=data["origin"],
@@ -464,7 +460,10 @@ def add_cargo():
         if field not in data:
             return jsonify({"error": f"Missing required field: {field}"}), 400
 
-    result = cargo_scheduler.add_shipment(
+    # Validate through inference engine using a request-local scheduler
+    # to avoid unbounded in-memory growth on the shared instance
+    local_cargo_scheduler = CargoScheduler()
+    result = local_cargo_scheduler.add_shipment(
         aircraft=data["aircraft"],
         origin=data["origin"],
         destination=data["destination"],
